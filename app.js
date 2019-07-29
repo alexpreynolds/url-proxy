@@ -18,10 +18,6 @@ const morgan = require('morgan');
  * Listen
  */
 
-/**
- * Get port from environment and store in Express.
- */
-
 let port = normalizePort(process.env.PORT || '9001');
 app.set('port', port);
 
@@ -126,6 +122,7 @@ app.all('/:url', (req, res, next) => {
   let lineCount = -1;
   /**
    * Short-circuit the final response when limits are violated or the URL-response is malformed
+   * ref. https://www.npmjs.com/package/request#streaming
    */
   req
     .pipe(request(url))
