@@ -5,7 +5,7 @@
       script: "npm run start",
       interpreter: "none",
       watch: false,
-      cwd: "/home/ubuntu/epilogos",
+      cwd: "/home/ubuntu/url-proxy",
       env: {
         "PORT": 9001,
         "NODE_ENV": "development",
