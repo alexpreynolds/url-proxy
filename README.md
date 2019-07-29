@@ -9,3 +9,7 @@ If the response contains no `content-length` header, we immediately return a 411
 We could also put a limit on the number of lines in the file, but I decided to disable this check. The client (in this case, the calling web application using this proxy service) can put its own limit on the total number of lines used from the response.
 
 To limit troubleshooting problems, we disable caching and also always return UTF8-encoded text.
+
+## Startup
+
+To debug, use `npm run start`. Or use `pm2 start url-proxy.development.json && pm2 save` if you use PM2 as a process manager, to start the proxy service and have it start up on reboot.
