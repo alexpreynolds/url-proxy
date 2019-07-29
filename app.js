@@ -24,8 +24,10 @@ app.set('port', port);
 let byteLimit = (process.env.BYTELIMIT || 1024*1024);
 // let lineLimit = (process.env.LINELIMIT || 100);
 
-let privateKey = fs.readFileSync('/etc/ssl/private/altius.org.key');
-let certificate = fs.readFileSync('/etc/ssl/certs/altius-bundle.crt');
+let privateKeyFn = (process.env.SSLPRIVATEKEY || '/etc/ssl/private/altius.org.key');
+let certificateFn = (process.env.SSLCERTIFICATE || '/etc/ssl/certs/altius-bundle.crt');
+let privateKey = fs.readFileSync(privateKeyFn);
+let certificate = fs.readFileSync(certificateFn);
 
 const options = {
   key: privateKey,
