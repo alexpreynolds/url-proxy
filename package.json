@@ -15,6 +15,9 @@
       "url": "http://github.com/alexpreynolds"
     }
   ],
+  "scripts": {
+    "start": "node ./app.js"
+  },
   "dependencies": {
     "cookie-parser": "~1.4.4",
     "debug": "~2.6.9",
@@ -23,7 +26,6 @@
     "morgan": "^1.9.1",
     "nocache": "^2.1.0",
     "normalize-port": "^1.0.0",
-    "pug": "^2.0.4",
     "request": "^2.88.0",
     "validator": "^11.1.0"
   }
