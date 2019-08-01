@@ -1,10 +1,20 @@
 {
   "name": "url-proxy",
-  "version": "0.1.0",
-  "private": true,
-  "scripts": {
-    "start": "node ./app.js"
+  "version": "1.0.0",
+  "description": "Express.js proxy server",
+  "private": false,
+  "author": "Alex Reynolds",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/alexpreynolds/url-proxy.git"
   },
+  "contributors": [
+    {
+      "name": "Alex Reynolds",
+      "url": "http://github.com/alexpreynolds"
+    }
+  ],
   "dependencies": {
     "cookie-parser": "~1.4.4",
     "debug": "~2.6.9",
