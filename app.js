@@ -5,7 +5,6 @@
  */
 
 const express = require('express');
-const app = module.exports = express();
 const request = require('request')
 const https = require('https');
 const fs = require('fs');
@@ -13,6 +12,9 @@ const debug = require('debug')('url-proxy:server');
 const normalizePort = require('normalize-port');
 const nocache = require('nocache');
 const morgan = require('morgan');
+const validator = require('validator');
+
+const app = module.exports = express();
 
 /**
  * Listen
@@ -26,6 +28,7 @@ let byteLimit = (process.env.BYTELIMIT || 1024*1024);
 
 let privateKeyFn = (process.env.SSLPRIVATEKEY || '/etc/ssl/private/altius.org.key');
 let certificateFn = (process.env.SSLCERTIFICATE || '/etc/ssl/certs/altius-bundle.crt');
+
 let privateKey = fs.readFileSync(privateKeyFn);
 let certificate = fs.readFileSync(certificateFn);
 
@@ -80,15 +83,6 @@ function onListening() {
 }
 
 /**
- * Response must be text
- */
- 
-function textonly(req, res, next) {
-  res.set('Content-Type', 'text/plain');
-  return next();
-}
-
-/**
  * Allow CORS
  */
 
@@ -110,7 +104,6 @@ function cors(req, res, next) {
  * Response, CORS, cache policy and logging
  */
 
-app.use(textonly);
 app.use(cors);
 app.use(nocache());
 app.use(morgan('combined'));
@@ -121,11 +114,35 @@ app.use(morgan('combined'));
 
 app.all('/:url', (req, res, next) => {
   let url = req.params.url;
-  let lineCount = -1;
+  
+  /**
+   * Is url really a valid URL?
+   * ref. https://github.com/validatorjs/validator.js
+   */
+   
+  let urlOptions = { 
+    protocols: ['http', 'https', 'ftp'], 
+    require_tld: true, 
+    require_protocol: false, 
+    require_host: true, 
+    require_valid_protocol: true, 
+    allow_underscores: false, 
+    host_whitelist: false, 
+    host_blacklist: false, 
+    allow_trailing_dot: false, 
+    allow_protocol_relative_urls: false, 
+    disallow_auth: false 
+  };
+  if (!validator.isURL(url, urlOptions)) {
+    res.status(400).send("Invalid URL");
+  }
+  
   /**
    * Short-circuit the final response when limits are violated or the URL-response is malformed
-   * ref. https://www.npmjs.com/package/request#streaming
+   * ref. https://github.com/request/request#streaming
    */
+   
+  let lineCount = -1;
   req
     .pipe(request(url))
     .on('response', function(response) {
@@ -134,8 +151,10 @@ app.all('/:url', (req, res, next) => {
       }
       let contentLength = parseInt(response.headers['content-length']);
       if (contentLength > byteLimit) {
-        res.status(400).send("Went over byte limit");
+        res.status(400).send("Went over content byte limit");
       }
+      /* Rewrite content header to force it to text */
+      response.headers['content-type'] = 'text/plain';
     })
 /*
     .on('data', function(data) {

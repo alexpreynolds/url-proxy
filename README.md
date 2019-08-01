@@ -1,6 +1,6 @@
 # url-proxy
 
-A small and simple [expressjs](https://expressjs.com/) application that takes an URL-encoded web address as an argument, performs a GET request for that URL, and writes the response as a UTF8-encoded text response back to the requesting client.
+A simple [Express.js](https://expressjs.com/) application that takes an URL-encoded web address as an argument, performs a GET request for that URL, and writes the response as a UTF8-encoded text response back to the requesting client.
 
 We use [HTTPS](https://https.cio.gov/faq/#what-information-does-https-protect) in order to add protection to URL parameters (such as the web address we are interested in requesting, and any authentication data passed along with it).
 
@@ -14,4 +14,4 @@ To limit troubleshooting problems, we disable caching and also always return UTF
 
 ## Startup
 
-To debug, use `npm run start`. Or use `pm2 start url-proxy.development.json && pm2 save` if you use [PM2](http://pm2.keymetrics.io/) as a process manager, to start the proxy service and have it start up on reboot.
+To debug, use `sudo npm run start`. Or use `sudo pm2 start url-proxy.development.json && sudo pm2 save` if you use [PM2](http://pm2.keymetrics.io/) as a process manager, to start the proxy service and have it start up on reboot. Use of `sudo` will be required if ownership and permissions for the SSL certificate and key are restricted.
