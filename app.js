@@ -5,7 +5,7 @@
  */
 
 const express = require('express');
-const request = require('request')
+const request = require('request').defaults({ strictSSL: false }); // get around bad or weird SSL certificate issues
 const https = require('https');
 const fs = require('fs');
 const debug = require('debug')('url-proxy:server');
@@ -112,6 +112,10 @@ app.use(morgan('combined'));
  * /:url (url must be URL-encoded)
  */
 
+app.get('/favicon.ico', (req, res) => {
+  res.sendStatus(404);
+});
+
 app.all('/:url', (req, res, next) => {
   let url = req.params.url;
   
@@ -146,10 +150,12 @@ app.all('/:url', (req, res, next) => {
   req
     .pipe(request(url))
     .on('response', function(response) {
-      if (!response.headers['content-length']) {
-        res.status(411).send("Content length header required");
-      }
-      let contentLength = parseInt(response.headers['content-length']);
+      //if (!response.headers['content-length']) {
+          //res.status(411).send("Content length header required");
+      //}
+      //let contentLength = parseInt(response.headers['content-length']);
+      //let contentLength = request.socket.bytesRead;
+      let contentLength = req.socket.bytesRead;
       if (contentLength > byteLimit) {
         res.status(400).send("Went over content byte limit");
       }
