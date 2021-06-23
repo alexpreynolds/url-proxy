@@ -5,7 +5,12 @@
  */
 
 const express = require('express');
-const request = require('request').defaults({ strictSSL: false }); // get around bad or weird SSL certificate issues
+const request = require('request').defaults({ 
+  strictSSL: false, 
+  timeout: 120000,
+  forever: true,
+  headers: {'Connection' : 'keep-alive'}, 
+}); 
 const https = require('https');
 const fs = require('fs');
 const debug = require('debug')('url-proxy:server');
@@ -13,6 +18,7 @@ const normalizePort = require('normalize-port');
 const nocache = require('nocache');
 const morgan = require('morgan');
 const validator = require('validator');
+const axios = require('axios');
 
 const app = module.exports = express();
 
@@ -23,7 +29,7 @@ const app = module.exports = express();
 let port = normalizePort(process.env.PORT || '9001');
 app.set('port', port);
 
-let byteLimit = (process.env.BYTELIMIT || 1024*1024);
+let byteLimit = (process.env.BYTELIMIT || 32*1024*1024);
 // let lineLimit = (process.env.LINELIMIT || 100);
 
 let privateKeyFn = (process.env.SSLPRIVATEKEY || '/etc/ssl/private/altius.org.key');
@@ -34,8 +40,13 @@ let certificate = fs.readFileSync(certificateFn);
 
 const options = {
   key: privateKey,
-  cert: certificate
+  cert: certificate,
+  keepAlive: true,
+  sessionTimeout: 1000,
 };
+
+// temporary resolution for UNABLE_TO_VERIFY_LEAF_SIGNATURE error
+// process.env.NODE_TLS_REJECT_UNAUTHORIZED = '0';
 
 let server = https.createServer(options, app);
 server.listen(port);
@@ -87,14 +98,24 @@ function onListening() {
  */
 
 function cors(req, res, next) {
-  res.set('Access-Control-Allow-Origin', req.headers.origin);
-  res.set('Access-Control-Allow-Methods', req.method);
-  res.set('Access-Control-Allow-Headers', 'X-Requested-With, Content-Type');
-  res.set('Access-Control-Allow-Credentials', true);
+  const whitelist = ['https://alexpreynolds.static.observableusercontent.com', 'https://epilogos.altius.org', 'https://index.altius.org', 'http://www.meuleman.org', 'https://www.meuleman.org', 'https://resources.altius.org'];
+
+  if (!req.headers.origin) {
+    return next();
+  }
+
+  if (whitelist.indexOf(req.headers.origin) !== -1) {
+    res.set('Connection', 'keep-alive');
+    res.set('Access-Control-Allow-Origin', req.headers.origin);
+    res.set('Access-Control-Allow-Methods', req.method);
+    res.set('Access-Control-Allow-Headers', 'X-Requested-With, Content-Type, Range, Content-Length');
+    res.set('Access-Control-Expose-Headers', 'Content-Length, Content-Range');
+    res.set('Access-Control-Allow-Credentials', true);
+  }
 
   // Respond OK if the method is OPTIONS
   if (req.method === 'OPTIONS') {
-    return res.send(200);
+    return res.sendStatus(200);
   } else {
     return next();
   }
@@ -140,35 +161,33 @@ app.all('/:url', (req, res, next) => {
   if (!validator.isURL(url, urlOptions)) {
     res.status(400).send("Invalid URL");
   }
-  
-  /**
-   * Short-circuit the final response when limits are violated or the URL-response is malformed
-   * ref. https://github.com/request/request#streaming
-   */
-   
-  let lineCount = -1;
-  req
-    .pipe(request(url))
-    .on('response', function(response) {
-      //if (!response.headers['content-length']) {
-          //res.status(411).send("Content length header required");
-      //}
-      //let contentLength = parseInt(response.headers['content-length']);
-      //let contentLength = request.socket.bytesRead;
-      let contentLength = req.socket.bytesRead;
-      if (contentLength > byteLimit) {
-        res.status(400).send("Went over content byte limit");
-      }
-      /* Rewrite content header to force it to text */
-      response.headers['content-type'] = 'text/plain';
-    })
-/*
-    .on('data', function(data) {
-      lineCount += data.toString('utf8').split(/\r\n|\r|\n/).length;
-      if (lineCount > lineLimit) {
-        res.status(400).send("Went over line limit");
-      }
-    })
-*/
-    .pipe(res);
+
+  const customHeaders = ('range' in req.headers) ? { 
+    'range' : req.headers.range,
+  } : {
+  };
+
+  const agent = new https.Agent({  
+    rejectUnauthorized: false,
+    key: privateKey,
+    cert: certificate,
+  });
+  axios({
+    method: 'get',
+    url: url,
+    responseType: 'stream',
+    httpsAgent: agent,
+    headers: customHeaders,
+  })
+  .then((response) => {
+    // debugging problem requests...
+    // console.log(`${JSON.stringify(Object.keys(response), null, 2)}`);
+    // console.log(`${JSON.stringify(Object.keys(response.config), null, 2)}`);
+    // console.log(`${JSON.stringify(response.config.headers, null, 2)}`);
+    // console.log(`${JSON.stringify(response.status, null, 2)}`);
+    res.set('Access-Control-Allow-Origin', '*');
+    res.status(response.status);
+    response.data.pipe(res);
+  })
+  .catch(err => console.log(err));
 });
