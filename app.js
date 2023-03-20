@@ -189,5 +189,12 @@ app.all('/:url', (req, res, next) => {
     res.status(response.status);
     response.data.pipe(res);
   })
-  .catch(err => console.log(err));
+  .catch((err) => {
+    // console.log(err);
+    // console.log(`foo ${err.response.status}`);
+    res.set('Access-Control-Allow-Origin', '*');
+    res.status(err.response.status);
+    err.response.data.pipe(res);
+    // res.pipe(null);
+  });
 });
